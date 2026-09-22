@@ -7,6 +7,5 @@ __pycache__/
 data/*.csv
 data/*.zip
 data/processed/
-results/
 data/
 venv/
