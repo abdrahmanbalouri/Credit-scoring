@@ -56,8 +56,7 @@ def main():
 
     train_mean = np.mean(train_scores, axis=1)
     val_mean = np.mean(val_scores, axis=1)
-    train_std = np.std(train_scores, axis=1)
-    val_std = np.std(val_scores, axis=1)
+   
 
     print(f"Validation AUC in Learning Curve: {val_mean[-1]:.4f}")
 
@@ -67,8 +66,7 @@ def main():
     plt.ylabel("AUC Score", fontsize=12)
     plt.grid(True, linestyle='--', alpha=0.7)
 
-    plt.fill_between(train_sizes, train_mean - train_std, train_mean + train_std, alpha=0.1, color="blue")
-    plt.fill_between(train_sizes, val_mean - val_std, val_mean + val_std, alpha=0.1, color="orange")
+ 
 
     plt.plot(train_sizes, train_mean, 'o-', color="blue", label="Training AUC")
     plt.plot(train_sizes, val_mean, 's-', color="orange", label="Validation AUC")
