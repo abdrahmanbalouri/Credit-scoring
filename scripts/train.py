@@ -1,6 +1,7 @@
 import os
 import joblib
 import pandas as pd
+import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
@@ -14,7 +15,7 @@ output_dir = data_dir / "processed"
 
 def plot_learning_curve(train_aucs, val_aucs, output_path):
     trees = range(1, len(train_aucs) + 1)
-
+  
     plt.figure(figsize=(10, 6))
     plt.plot(trees, train_aucs, label="Training AUC")
     plt.plot(trees, val_aucs, label="Validation AUC")
@@ -22,7 +23,6 @@ def plot_learning_curve(train_aucs, val_aucs, output_path):
     plt.xlabel("Number of Trees")
     plt.ylabel("ROC AUC")
     plt.title("Random Forest Learning Curve")
-    
     plt.legend(loc="lower right", fontsize=10)
     plt.grid(True)
     plt.tight_layout()
@@ -52,7 +52,8 @@ def main():
         class_weight='balanced_subsample',
         random_state=42,
         n_jobs=-1,
-        warm_start=True
+        warm_start=True,
+        verbose=1
     )
 
     train_aucs = []
@@ -76,11 +77,17 @@ def main():
         
     
     final_auc = val_aucs[-1]
-    print(final_auc)
+    print(f"Final Validation AUC after {total_trees} trees: {final_auc:.4f}")
+    best_iteration = np.argmax(val_aucs) + 1
+    best_auc = val_aucs[best_iteration - 1]
+    print(f"Best Validation AUC: {best_auc:.4f} at iteration {best_iteration}")
+    
 
     plot_learning_curve(train_aucs, val_aucs, "results/model/learning_curve.png")
 
-    model_path = "results/model/random_forest.pkl"
+
+
+    model_path = "results/model/my_own_model.pkl"
     joblib.dump(model, model_path)
 
 if __name__ == "__main__":
