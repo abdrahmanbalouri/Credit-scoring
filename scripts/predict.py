@@ -26,7 +26,9 @@ def select_target_clients(model, X_train, y_train, train_ids, test_ids):
         {"id": test_id, "dataset_type": "test","pdf_name":"lient_test.pdf"}
     ]
 def predict():
-    X_test, test_ids = preprocess.predect_processing()
+    df_test_with_id = pd.readcsv("./data/processed/test_clean.csv")
+    test_ids = df_test_with_id["SK_ID_CURR"]
+    X_test = df_test_with_id.drop(columns=["SK_ID_CURR"])
 
     model = joblib.load("./results/model/my_own_model.pkl")
     preds = model.predict(X_test)
@@ -38,13 +40,10 @@ def predict():
     future_import(model, X_test)
 
   
-    X_train, y_train, train_ids = preprocess.preprocess()
-
-    df_train_with_id = X_train.copy()
-    df_train_with_id["SK_ID_CURR"] = train_ids
-
-    df_test_with_id = X_test.copy()
-    df_test_with_id["SK_ID_CURR"] = test_ids
+    df_train_with_id = pd.read_csv("./data/processed/train_clean.csv")
+    train_ids = df_train_with_id["SK_ID_CURR"]
+    y_train = df_train_with_id["TARGET"]
+    X_train = df_train_with_id.drop(columns=["SK_ID_CURR", "TARGET"])
 
     feature_cols = [col for col in X_test.columns if col != "SK_ID_CURR"]
 
