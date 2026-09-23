@@ -1,0 +1,54 @@
+======================================================================
+              HOME CREDIT - MODEL TRAINING & EVALUATION REPORT
+======================================================================
+
+1. ALGORITHM OVERVIEW
+----------------------------------------------------------------------
+- Model Used: Random Forest Classifier (with iterative warm_start).
+- Architecture: An ensemble learning method constructing multiple 
+  decision trees during training and outputting the class prediction 
+  by averaging individual tree probabilities.
+- Key Hyperparameters:
+  * n_estimators: 110 trees (monitored via warm_start progression)
+  * max_depth: 20 (to control tree growth and complexity)
+  * min_samples_split: 100 (ensuring structural robustness)
+  * min_samples_leaf: 40 (preventing excessive granularity at leaves)
+  * class_weight: 'balanced_subsample' (addressing class imbalance)
+
+
+2. WHY ACCURACY SHOULD NOT BE USED IN THIS CASE
+----------------------------------------------------------------------
+- Severe Class Imbalance: The Home Credit dataset has a heavily skewed 
+  target distribution where the vast majority of loans are successfully 
+  repaid (Target = 0) and only a small fraction result in default (Target = 1).
+- The Accuracy Trap: A naive baseline model that blindly predicts 
+  "no default" for every single applicant would easily achieve an 
+  accuracy exceeding 90%. However, it would completely fail its core 
+  business objective—identifying risky loans.
+- Metric Choice: We rely on ROC AUC (Area Under the Receiver Operating 
+  Characteristic Curve) instead, as it evaluates the model's ability 
+  to rank-order applicants correctly across all possible classification 
+  thresholds, regardless of class imbalance.
+
+
+3. MODEL LIMITATIONS & POSSIBLE IMPROVEMENTS
+----------------------------------------------------------------------
+- Limitations:
+  * Interpretability Complexity: While Random Forest provides global 
+    feature importance, it remains a black-box model for individual 
+    decisions unless paired with local interpretability tools like SHAP.
+  * Training Overhead: Scaling the ensemble size and depth on large-scale 
+    tabular data requires significant computational time and memory.
+  
+- Possible Improvements:
+  * Advanced Feature Engineering: Incorporating aggregated relational 
+    metrics from external credit bureaus or historical installment data.
+  * Algorithmic Transition: Exploring Gradient Boosting frameworks 
+    (such as XGBoost or LightGBM) with native early stopping to squeeze 
+    out higher predictive performance.
+  * Hyperparameter Tuning: Utilizing automated grid search or Bayesian 
+    optimization (Optuna) to fine-tune leaf nodes and depth constraints.
+
+======================================================================
+Status: Methodology documented for regulatory audit and compliance.
+======================================================================
