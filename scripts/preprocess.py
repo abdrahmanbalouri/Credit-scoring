@@ -17,7 +17,7 @@ test_ids = test.pop("SK_ID_CURR")
 
 # 365243 is a placeholder, not a real number of employment days.
 for data in [train, test]:
-    data["DAYS_EMPLOYED_ANOMALOUS"] = (data["DAYS_EMPLOYED"] == 365243).astype("int8")
+    # data["DAYS_EMPLOYED_ANOMALOUS"] = (data["DAYS_EMPLOYED"] == 365243).astype("int8")
     data["DAYS_EMPLOYED"] = data["DAYS_EMPLOYED"].replace(365243, np.nan)
 
     data["AGE_YEARS"] = -data["DAYS_BIRTH"] / 365.25
@@ -27,6 +27,17 @@ for data in [train, test]:
     data["CREDIT_ANNUITY_RATIO"] = data["AMT_CREDIT"] / data["AMT_ANNUITY"]
     data["INCOME_PER_PERSON"] = data["AMT_INCOME_TOTAL"] / data["CNT_FAM_MEMBERS"]
     data["EXT_SOURCE_MEAN"] = data[["EXT_SOURCE_1", "EXT_SOURCE_2", "EXT_SOURCE_3"]].mean(axis=1)
+
+columns_to_drop = [
+    "EXT_SOURCE_1",
+    "EXT_SOURCE_2",
+    "EXT_SOURCE_3",
+    "DAYS_BIRTH",
+    "AMT_CREDIT",
+    "AMT_INCOME_TOTAL",
+    "AMT_ANNUITY",
+]
+data = data.drop(columns=columns_to_drop)
 
 # Remove columns with more than 65% missing values in the training data.
 high_missing = train.columns[train.isna().mean() > 0.65].tolist()
