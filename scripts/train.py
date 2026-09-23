@@ -53,7 +53,6 @@ def main():
         random_state=42,
         n_jobs=-1,
         warm_start=True,
-        verbose=1
     )
 
     train_aucs = []

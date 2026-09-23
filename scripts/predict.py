@@ -109,7 +109,7 @@ def generate_local_interpretation_pdf(
     X_all = df[feature_columns]
 
     
-    score = model.predict(X_client)[0]
+    score = model.predict_proba(X_client)[0,1]
 
     explainer = shap.TreeExplainer(model)
     shap_values = explainer(X_client)
