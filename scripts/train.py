@@ -7,18 +7,23 @@ from sklearn.model_selection import train_test_split, learning_curve, Stratified
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import roc_auc_score
 from sklearn.impute import SimpleImputer
+from pathlib import Path
 
-from scripts.preprocess import load_and_preprocess_data
+
+
+project_dir = Path(__file__).resolve().parents[1]
+data_dir = project_dir / "data"
+output_dir = data_dir / "processed"
+
 
 def main():
     os.makedirs("results/model", exist_ok=True)
 
-    data_path = "data/application_train.csv"
-    if not os.path.exists(data_path):
-        raise FileNotFoundError(f"File not found: {data_path}")
 
-    X, y = load_and_preprocess_data(data_path)
 
+    train_pd = pd.read_csv(output_dir/"train_clean.csv")
+    X = train_pd.drop(columns=['TARGET'])
+    y = train_pd['TARGET']
     imputer = SimpleImputer(strategy='median')
     X_imputed = pd.DataFrame(imputer.fit_transform(X), columns=X.columns)
 
@@ -27,7 +32,7 @@ def main():
     )
 
     model = RandomForestClassifier(
-        n_estimators=150,
+        n_estimators=75,
         max_depth=12,
         min_samples_split=20,
         min_samples_leaf=10,
