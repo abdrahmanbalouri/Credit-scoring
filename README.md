@@ -2,7 +2,7 @@
 
 A machine-learning project for predicting whether a loan applicant is likely to default. The project uses the Home Credit Default Risk dataset, performs feature engineering and preprocessing, and trains a class-balanced random forest evaluated with ROC AUC.
 
-**Username:** `ismailhajji`
+**Username:** `ihajji_01EDU_oujda_09_2026`
 
 ## Project structure
 
