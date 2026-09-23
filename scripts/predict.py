@@ -8,6 +8,8 @@ import jinja2
 import base64
 from io import BytesIO
 import joblib
+import warnings
+warnings.filterwarnings('ignore')
 def select_target_clients(model, X_train, y_train, train_ids, test_ids):
 
     train_preds = model.predict(X_train)
