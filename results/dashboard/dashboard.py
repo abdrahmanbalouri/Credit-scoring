@@ -14,14 +14,12 @@ import joblib
 from scripts import preprocess
 model = joblib.load("./results/model/my_own_model.pkl")
 
-X_test, test_ids = preprocess.predect_processing()
-X_train, y_train, train_ids = preprocess.preprocess()
+df_train = pd.read_csv("./data/processed/train_clean.csv")
+df_test = pd.read_csv("./data/processed/test_clean.csv")
+test_ids = df_test["SK_ID_CURR"]
+X_test = df_test.drop(columns=["SK_ID_CURR"])
 
-df_train = X_train.copy()
-df_train["SK_ID_CURR"] = train_ids
 
-df_test = X_test.copy()
-df_test["SK_ID_CURR"] = test_ids
 
 feature_cols = [col for col in X_test.columns if col != "SK_ID_CURR"]
 
@@ -127,13 +125,29 @@ def update_dashboard(n_clicks, customer_id, dataset_source):
 
     score_text = f"{score:.4f}"
 
+    # Calculate SHAP values
     shap_vals = explainer(X_client)
     
-    base_val = explainer.expected_value[1] if isinstance(explainer.expected_value, (np.ndarray, list)) else explainer.expected_value
-    values = shap_vals.values[0] if len(shap_vals.values.shape) == 3 else shap_vals.values[0]
+    # Extract values array robustly
+    values = np.asarray(shap_vals.values)
     
+    # Handle SHAP output dimensions:
+    # 3D shape (1, n_features, n_classes) -> extract class 1 (positive class)
+    # 2D shape (1, n_features) -> extract sample 0
+    if values.ndim == 3:
+        values = values[0, :, 1]
+    elif values.ndim == 2:
+        values = values[0]
+        
+    # Ensure values is strictly a 1D vector of shape (n_features,)
+    values = values.ravel()
+    
+    # Get top 10 contributing feature indices
     top_indices = np.argsort(np.abs(values))[-10:]
-    top_features = [feature_cols[i] for i in top_indices]
+    
+    # Convert feature_cols to numpy array for safe vectorized indexing
+    feature_cols_arr = np.array(feature_cols)
+    top_features = feature_cols_arr[top_indices].tolist()
     top_shap_values = values[top_indices]
 
     colors = ['#ff0051' if v > 0 else '#008bfb' for v in top_shap_values]

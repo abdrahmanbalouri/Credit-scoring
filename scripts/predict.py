@@ -7,7 +7,6 @@ import pdfkit
 import jinja2
 import base64
 from io import BytesIO
-from scripts import preprocess
 import joblib
 def select_target_clients(model, X_train, y_train, train_ids, test_ids):
 
@@ -26,7 +25,7 @@ def select_target_clients(model, X_train, y_train, train_ids, test_ids):
         {"id": test_id, "dataset_type": "test","pdf_name":"lient_test.pdf"}
     ]
 def predict():
-    df_test_with_id = pd.readcsv("./data/processed/test_clean.csv")
+    df_test_with_id = pd.read_csv("./data/processed/test_clean.csv")
     test_ids = df_test_with_id["SK_ID_CURR"]
     X_test = df_test_with_id.drop(columns=["SK_ID_CURR"])
 
@@ -100,9 +99,30 @@ def generate_local_interpretation_pdf(
     shap_values = explainer(X_client)
 
     plt.figure(figsize=(10, 3))
+  # 1. Extract base value safely for binary classification (class 1)
+    if isinstance(explainer.expected_value, (np.ndarray, list)):
+        base_val = explainer.expected_value[1] if len(explainer.expected_value) > 1 else explainer.expected_value[0]
+    else:
+        base_val = explainer.expected_value
+
+    # 2. Extract SHAP values for the single client (row 0)
+    vals = shap_values.values if hasattr(shap_values, "values") else shap_values
+
+    # Handle multi-class / 3D output (samples, features, classes) -> take sample 0, class 1
+    if vals.ndim == 3:
+        sample_shap = vals[0, :, 1]
+    elif vals.ndim == 2:
+        sample_shap = vals[0]
+    else:
+        sample_shap = vals
+
+    # Ensure strictly 1D
+    sample_shap = sample_shap.ravel()
+
+    # 3. Render force plot
     shap.plots.force(
-        explainer.expected_value[1] if isinstance(explainer.expected_value, np.ndarray) else explainer.expected_value,
-        shap_values.values[0] if len(shap_values.values.shape) == 3 else shap_values.values[0],
+        base_val,
+        sample_shap,
         X_client.iloc[0],
         matplotlib=True,
         show=False
