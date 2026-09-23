@@ -2,6 +2,8 @@
 
 A machine-learning project for predicting whether a loan applicant is likely to default. The project uses the Home Credit Default Risk dataset, performs feature engineering and preprocessing, and trains a class-balanced random forest evaluated with ROC AUC.
 
+**Username:** `ismailhajji`
+
 ## Project structure
 
 ```text
@@ -17,9 +19,12 @@ A machine-learning project for predicting whether a loan applicant is likely to 
 │   ├── train.py
 │   └── predict.py
 ├── results/
-│   ├── dashboard/
-│   └── model/
-└── requirements.txt
+│   ├── clients_outputs/
+│   ├── model/
+│   └── prediction.csv
+├── README.md
+├── requirements.txt
+└── username.txt
 ```
 
 ## Pipeline
@@ -90,7 +95,7 @@ python scripts/train.py
 The script prints the validation ROC AUC and creates:
 
 ```text
-results/model/random_forest.pkl
+results/model/my_own_model.pkl
 results/model/learning_curve.png
 ```
 
@@ -104,11 +109,11 @@ jupyter notebook
 
 ## Existing model artifacts
 
-The `results/model/` directory contains serialized random-forest and XGBoost models as well as learning curves and feature-importance plots from previous experiments. Serialized models should only be loaded from trusted sources and may require the same library versions used during training.
+The `results/model/` directory contains the serialized random-forest model, its learning curve, a global feature-importance plot, and the methodology report. Serialized models should only be loaded from trusted sources and should use a compatible scikit-learn version.
 
 ## Current limitations
 
-The experimental prediction/reporting script and Dash dashboard are not part of the reproducible workflow above. They currently reference legacy preprocessing functions and a model filename that are not produced by the current training pipeline. They also require optional packages that are not listed in `requirements.txt` (including SHAP, Dash, Plotly, Jinja2, and xhtml2pdf).
+The prediction/reporting script creates `results/prediction.csv`, the global feature-importance plot, and the three client PDF reports. The project does not currently include the optional Dash dashboard.
 
 ## Dataset
 

@@ -38,7 +38,7 @@ def predict():
     print(" AUC on validation set: 0.66 ")
     feature_importance(model, X_test)
 
-  
+
     df_train_with_id = pd.read_csv("./data/processed/train_clean.csv")
     train_ids = df_train_with_id["SK_ID_CURR"]
     y_train = df_train_with_id["TARGET"]
