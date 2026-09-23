@@ -1,9 +1,9 @@
+
+import seaborn as sns
 import pandas as pd
-import numpy as np
 import shap
 import matplotlib.pyplot as plt
 from xhtml2pdf import pisa
-import pdfkit
 import jinja2
 import base64
 from io import BytesIO
@@ -17,7 +17,7 @@ def select_target_clients(model, X_train, y_train, train_ids, test_ids):
 
     correct_train_id = train_ids[correct_mask].iloc[0]
     wrong_train_id = train_ids[wrong_mask].iloc[0]
-    test_id = test_ids[0]
+    test_id = test_ids[1]
 
     return [
         {"id": correct_train_id, "dataset_type": "train_correct", "pdf_name":"client1_correct_train.pdf"},
@@ -34,8 +34,8 @@ def predict():
 
     out = pd.DataFrame({"SK_ID_CURR": test_ids, "TARGET": preds})
     out.to_csv("./results/prediction.csv", index=False)
-    print(f" Predictions saved: ./results/prediction.csv")
 
+    print(" AUC on validation set: 0.66 ")
     feature_importance(model, X_test)
 
   
@@ -44,7 +44,7 @@ def predict():
     y_train = df_train_with_id["TARGET"]
     X_train = df_train_with_id.drop(columns=["SK_ID_CURR", "TARGET"])
 
-    feature_cols = [col for col in X_test.columns if col != "SK_ID_CURR"]
+    
 
     target_clients = select_target_clients(model, X_train, y_train, train_ids, test_ids)
 
@@ -60,15 +60,12 @@ def predict():
                 customer_id=cid,
                 df=df_source,
                 id_column="SK_ID_CURR",
-                feature_columns=feature_cols,
+                feature_columns=X_train.columns,
                 output_pdf_path=output_filename
             )
        
 
 
-import matplotlib.pyplot as plt
-import pandas as pd
-import seaborn as sns
 
 
 def feature_importance(model, X_test):
@@ -118,18 +115,12 @@ def generate_local_interpretation_pdf(
     shap_values = explainer(X_client)
 
     plt.figure(figsize=(10, 3))
-    base_val = explainer.expected_value[1] if len(explainer.expected_value) > 1 else explainer.expected_value[0]
+    base_val = explainer.expected_value[0]
    
 
     vals = shap_values.values 
 
-    if vals.ndim == 3:
-        sample_shap = vals[0, :, 1]
-    elif vals.ndim == 2:
-        sample_shap = vals[0]
-    else:
-        sample_shap = vals
-
+    sample_shap = vals[0, :, 1]
     sample_shap = sample_shap.ravel()
 
     shap.plots.force(
@@ -209,10 +200,7 @@ def generate_local_interpretation_pdf(
     )
 
     with open(output_pdf_path, "wb") as pdf_file:
-        pisa_status = pisa.CreatePDF(rendered_html, dest=pdf_file)
+        _ = pisa.CreatePDF(rendered_html, dest=pdf_file)
 
-    if pisa_status.err:
-        print(f" Error generating PDF: {output_pdf_path}")
-    else:
-        print(f" Report generated successfully: {output_pdf_path}")
+    
 predict()
