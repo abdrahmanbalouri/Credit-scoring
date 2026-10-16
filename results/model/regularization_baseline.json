@@ -1,0 +1,10 @@
+{
+  "trees": 72,
+  "max_depth": 20,
+  "min_samples_leaf": 40,
+  "training_auc": 0.8678771406656294,
+  "validation_auc": 0.7412219043510098,
+  "gap": 0.1266552363146196,
+  "processed_data_sha256": "43e323a3d652ab75e3bb0e880d60d7c0608e181e581023c1baf909a049198b43",
+  "evaluation": "Outer stratified 80/20 split, random_state=42, before stronger regularization"
+}

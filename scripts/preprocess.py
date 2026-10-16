@@ -2,11 +2,13 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+from sklearn.model_selection import train_test_split
 
 
 project_dir = Path(__file__).resolve().parents[1]
 data_dir = project_dir / "data"
 output_dir = data_dir / "processed"
+output_dir.mkdir(parents=True, exist_ok=True)
 
 train = pd.read_csv(data_dir / "application_train.csv")
 test = pd.read_csv(data_dir / "application_test.csv")
@@ -22,10 +24,11 @@ for data in [train, test]:
 
     data["AGE_YEARS"] = -data["DAYS_BIRTH"] / 365.25
     data["EMPLOYMENT_YEARS"] = -data["DAYS_EMPLOYED"] / 365.25
-    data["CREDIT_INCOME_RATIO"] = data["AMT_CREDIT"] / data["AMT_INCOME_TOTAL"]
-    data["ANNUITY_INCOME_RATIO"] = data["AMT_ANNUITY"] / data["AMT_INCOME_TOTAL"]
-    data["CREDIT_ANNUITY_RATIO"] = data["AMT_CREDIT"] / data["AMT_ANNUITY"]
-    data["INCOME_PER_PERSON"] = data["AMT_INCOME_TOTAL"] / data["CNT_FAM_MEMBERS"]
+    # Undefined ratios become missing values and are imputed below.
+    data["CREDIT_INCOME_RATIO"] = data["AMT_CREDIT"] / data["AMT_INCOME_TOTAL"].replace(0, np.nan)
+    data["ANNUITY_INCOME_RATIO"] = data["AMT_ANNUITY"] / data["AMT_INCOME_TOTAL"].replace(0, np.nan)
+    data["CREDIT_ANNUITY_RATIO"] = data["AMT_CREDIT"] / data["AMT_ANNUITY"].replace(0, np.nan)
+    data["INCOME_PER_PERSON"] = data["AMT_INCOME_TOTAL"] / data["CNT_FAM_MEMBERS"].replace(0, np.nan)
     data["EXT_SOURCE_MEAN"] = data[["EXT_SOURCE_1", "EXT_SOURCE_2", "EXT_SOURCE_3"]].mean(axis=1)
 
 columns_to_drop = [
@@ -37,10 +40,17 @@ columns_to_drop = [
     "AMT_INCOME_TOTAL",
     "AMT_ANNUITY",
 ]
-data = data.drop(columns=columns_to_drop)
+train = train.drop(columns=columns_to_drop)
+test = test.drop(columns=columns_to_drop)
+
+# Use exactly the training rows selected in train.py. Validation rows must not
+# influence missing-value thresholds, imputation statistics, or the vocabulary.
+fit_indices, _ = train_test_split(
+    train.index, test_size=0.2, random_state=42, stratify=target
+)
 
 # Remove columns with more than 65% missing values in the training data.
-high_missing = train.columns[train.isna().mean() > 0.65].tolist()
+high_missing = train.columns[train.loc[fit_indices].isna().mean() > 0.65].tolist()
 train = train.drop(columns=high_missing)
 test = test.drop(columns=high_missing)
 
@@ -48,15 +58,19 @@ categorical_columns = train.select_dtypes(include="object").columns.tolist()
 numeric_columns = train.select_dtypes(include="number").columns
 
 # Learn replacements from train only, then apply them to both datasets.
-medians = train[numeric_columns].median()
+medians = train.loc[fit_indices, numeric_columns].median().fillna(0)
 train[numeric_columns] = train[numeric_columns].fillna(medians)
 test[numeric_columns] = test[numeric_columns].fillna(medians)
 train[categorical_columns] = train[categorical_columns].fillna("Missing")
 test[categorical_columns] = test[categorical_columns].fillna("Missing")
 
+feature_columns = pd.get_dummies(
+    train.loc[fit_indices], columns=categorical_columns, dtype="int8"
+).columns
 train = pd.get_dummies(train, columns=categorical_columns, dtype="int8")
 test = pd.get_dummies(test, columns=categorical_columns, dtype="int8")
-train, test = train.align(test, join="left", axis=1, fill_value=0)
+train = train.reindex(columns=feature_columns, fill_value=0)
+test = test.reindex(columns=feature_columns, fill_value=0)
 
 train.insert(0, "SK_ID_CURR", train_ids)
 train.insert(1, "TARGET", target)

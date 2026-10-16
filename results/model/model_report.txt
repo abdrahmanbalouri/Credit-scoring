@@ -9,11 +9,19 @@
   decision trees during training and outputting the class prediction 
   by averaging individual tree probabilities.
 - Key Hyperparameters:
-  * n_estimators: 110 trees (monitored via warm_start progression)
-  * max_depth: 20 (to control tree growth and complexity)
-  * min_samples_split: 100 (ensuring structural robustness)
-  * min_samples_leaf: 40 (preventing excessive granularity at leaves)
+  * n_estimators: up to 110 trees (monitored via warm_start progression)
+  * Early stopping: stop after 10 consecutive trees without validation
+    ROC AUC improvement; save the model with the best validation ROC AUC.
+  * max_depth: 10 (limits tree complexity)
+  * min_samples_split: 1000 (requires larger groups before splitting)
+  * min_samples_leaf: 500 (prevents fitting very small client groups)
   * class_weight: 'balanced_subsample' (addressing class imbalance)
+
+- Preprocessing: replace the employment-day anomaly, derive financial and
+  demographic ratios, remove highly missing columns, impute, and one-hot encode.
+  Missing-value thresholds, numeric medians, and category vocabulary are learned
+  only from the 80% training split; validation rows do not fit preprocessing.
+  Ratios with a zero denominator are imputed as missing values.
 
 
 2. WHY ACCURACY SHOULD NOT BE USED IN THIS CASE
@@ -52,3 +60,28 @@
 ======================================================================
 Status: Methodology documented for regulatory audit and compliance.
 ======================================================================
+
+4. VALIDATION RESULTS
+----------------------------------------------------------------------
+Reference validation ROC AUC (hard-coded): 0.66
+Calculated validation ROC AUC: 0.7315
+Validation samples: 61503
+Evaluation: 20% stratified holdout, random_state=42 (same as train.py).
+Score: predicted probability of default (TARGET=1).
+
+5. LEARNING CURVE AND STOPPING DECISION
+----------------------------------------------------------------------
+Learning curve: results/model/learning_curve.png (ROC AUC vs. number of trees).
+Stopped after 36 trees: the validation learning curve had no improvement for 10 consecutive trees after its best value.
+Saved the best model at 26 trees, where validation AUC was highest (0.7315).
+Training AUC at that point: 0.7442; train-validation gap: 0.0126.
+Last evaluated point: training AUC 0.7439, validation AUC 0.7308.
+The gap measures the difference in training and validation performance; it does not by itself prove the absence of overfitting.
+Overfitting controls: max_depth=10, min_samples_split=1000, min_samples_leaf=500, and validation-based early stopping.
+Regularization was compared on an internal 80/20 split (random_state=17) of the outer training partition. Preprocessing was fitted on the outer training partition; the outer validation rows were excluded from the comparison.
+Of three 60-tree candidates, choose the highest internal selection AUC among candidates with a training-selection gap <= 0.03. This diagnostic limit is not a statistical guarantee. See regularization_search.csv.
+
+Regularization comparison on the same outer split:
+Previous model: training AUC 0.8679, validation AUC 0.7412, gap 0.1267.
+Current model: training AUC 0.7442, validation AUC 0.7315, gap 0.0126.
+Shallower trees and larger leaves reduce the opportunity to memorize small training groups. The measured gap and validation plateau are evidence about this split, not proof of zero overfitting. Validation is used for early stopping; future-data performance still requires an independent evaluation.

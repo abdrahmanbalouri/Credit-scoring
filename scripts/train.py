@@ -1,24 +1,33 @@
 import os
 import joblib
 import pandas as pd
-import numpy as np
+from copy import deepcopy
+import matplotlib
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import roc_auc_score
 from pathlib import Path
 import warnings
+import json
+import hashlib
 warnings.filterwarnings('ignore')
 project_dir = Path(__file__).resolve().parents[1]
 data_dir = project_dir / "data"
 output_dir = data_dir / "processed"
+# Selected on an internal split of the training partition; see regularization.py.
+MODEL_PARAMS = dict(max_depth=10, min_samples_split=1000, min_samples_leaf=500)
 
-def plot_learning_curve(train_aucs, val_aucs, output_path):
+def plot_learning_curve(train_aucs, val_aucs, output_path, best_iteration=None):
     trees = range(1, len(train_aucs) + 1)
   
     plt.figure(figsize=(10, 6))
     plt.plot(trees, train_aucs, label="Training AUC")
     plt.plot(trees, val_aucs, label="Validation AUC")
+    if best_iteration is not None:
+        plt.axvline(best_iteration, color="gray", linestyle="--",
+                    label=f"Saved model: {best_iteration} trees")
 
     plt.xlabel("Number of Trees")
     plt.ylabel("ROC AUC")
@@ -30,6 +39,74 @@ def plot_learning_curve(train_aucs, val_aucs, output_path):
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     plt.savefig(output_path, dpi=300)
     plt.close()
+
+
+def write_training_report(train_aucs, val_aucs, best_iteration, patience,
+                          validation_samples, report_path="results/model/model_report.txt"):
+    report_path = Path(report_path)
+    report = report_path.read_text() if report_path.exists() else ""
+    report = report.split("\n4. VALIDATION RESULTS\n", 1)[0].rstrip()
+    best_index = best_iteration - 1
+    stopped_early = len(val_aucs) - best_iteration >= patience
+    if stopped_early:
+        decision = (
+            f"Stopped after {len(val_aucs)} trees: the validation learning curve had no "
+            f"improvement for {patience} consecutive trees after its best value."
+        )
+    else:
+        decision = (
+            f"Stopped at the configured maximum of {len(val_aucs)} trees; "
+            f"the {patience}-tree early-stopping patience was not exhausted."
+        )
+    report_path.parent.mkdir(parents=True, exist_ok=True)
+    report_path.write_text(
+        report + "\n\n4. VALIDATION RESULTS\n" + "-" * 70 + "\n"
+        + "Reference validation ROC AUC (hard-coded): 0.66\n"
+        + f"Calculated validation ROC AUC: {val_aucs[best_index]:.4f}\n"
+        + f"Validation samples: {validation_samples}\n"
+        + "Evaluation: 20% stratified holdout, random_state=42.\n"
+        + "Score: predicted probability of default (TARGET=1).\n"
+        + "\n5. LEARNING CURVE AND STOPPING DECISION\n" + "-" * 70 + "\n"
+        + "Learning curve: results/model/learning_curve.png (ROC AUC vs. number of trees).\n"
+        + decision + "\n"
+        + f"Saved the best model at {best_iteration} trees, where validation AUC "
+        + f"was highest ({val_aucs[best_index]:.4f}).\n"
+        + f"Training AUC at that point: {train_aucs[best_index]:.4f}; "
+        + f"train-validation gap: {train_aucs[best_index] - val_aucs[best_index]:.4f}.\n"
+        + f"Last evaluated point: training AUC {train_aucs[-1]:.4f}, "
+        + f"validation AUC {val_aucs[-1]:.4f}.\n"
+        + "The gap measures the difference in training and validation performance; "
+        + "it does not by itself prove the absence of overfitting.\n"
+        + f"Overfitting controls: max_depth={MODEL_PARAMS['max_depth']}, "
+        + f"min_samples_split={MODEL_PARAMS['min_samples_split']}, "
+        + f"min_samples_leaf={MODEL_PARAMS['min_samples_leaf']}, "
+        + "and validation-based early stopping.\n"
+        + "Regularization was compared on an internal 80/20 split (random_state=17) "
+        + "of the outer training partition. Preprocessing was fitted on the outer training "
+        + "partition; the outer validation rows were excluded from the comparison.\n"
+        + "Of three 60-tree candidates, choose the highest internal selection AUC "
+        + "among candidates with a training-selection gap <= 0.03. This diagnostic "
+        + "limit is not a statistical guarantee. See regularization_search.csv.\n"
+    )
+    baseline_path = project_dir / "results/model/regularization_baseline.json"
+    if baseline_path.exists():
+        baseline = json.loads(baseline_path.read_text())
+        # Compare historical measurements only when the processed data match.
+        fingerprint = hashlib.sha256((output_dir / "train_clean.csv").read_bytes()).hexdigest()
+        if fingerprint == baseline["processed_data_sha256"]:
+            gap = train_aucs[best_index] - val_aucs[best_index]
+            with report_path.open("a") as report_file:
+                report_file.write(
+                    "\nRegularization comparison on the same outer split:\n"
+                    + f"Previous model: training AUC {baseline['training_auc']:.4f}, "
+                    + f"validation AUC {baseline['validation_auc']:.4f}, gap {baseline['gap']:.4f}.\n"
+                    + f"Current model: training AUC {train_aucs[best_index]:.4f}, "
+                    + f"validation AUC {val_aucs[best_index]:.4f}, gap {gap:.4f}.\n"
+                    + "Shallower trees and larger leaves reduce the opportunity to memorize "
+                    + "small training groups. The measured gap and validation plateau "
+                    + "are evidence about this split, not proof of zero overfitting. "
+                    + "Validation is used for early stopping; future-data performance "
+                    + "still requires an independent evaluation.\n")
 
 
 def main():
@@ -46,21 +123,23 @@ def main():
 
     model = RandomForestClassifier(
         n_estimators=1,
-        max_depth=20,
-        min_samples_split=100,
-        min_samples_leaf=40,
+        **MODEL_PARAMS,
         class_weight='balanced_subsample',
         random_state=42,
         n_jobs=-1,
         warm_start=True,
-        verbose=1
+        verbose=0
     )
 
     train_aucs = []
     val_aucs = []
     total_trees = 110
+    patience = 10
+    best_auc = float("-inf")
+    best_iteration = 0
+    best_model = None
+    rounds_without_improvement = 0
 
-    print(f"Training Random Forest up to {total_trees} trees...")
     
     for i in range(1, total_trees + 1):
         model.set_params(n_estimators=i)
@@ -74,21 +153,36 @@ def main():
         
         train_aucs.append(train_auc)
         val_aucs.append(val_auc)
+
+        if val_auc > best_auc:
+            best_auc = val_auc
+            best_iteration = i
+            # warm_start mutates the forest, so retain an independent snapshot.
+            best_model = deepcopy(model)
+            rounds_without_improvement = 0
+        else:
+            rounds_without_improvement += 1
+
+        if rounds_without_improvement >= patience:
+            break
         
     
-    final_auc = val_aucs[-1]
-    print(f"Final Validation AUC after {total_trees} trees: {final_auc:.4f}")
-    best_iteration = np.argmax(val_aucs) + 1
-    best_auc = val_aucs[best_iteration - 1]
-    print(f"Best Validation AUC: {best_auc:.4f} at iteration {best_iteration}")
     
 
-    plot_learning_curve(train_aucs, val_aucs, "results/model/learning_curve.png")
+    plot_learning_curve(train_aucs, val_aucs, "results/model/learning_curve.png", best_iteration)
+    pd.DataFrame({
+        "trees": range(1, len(val_aucs) + 1),
+        "training_auc": train_aucs, "validation_auc": val_aucs,
+        "selected": [i == best_iteration for i in range(1, len(val_aucs) + 1)],
+    }).to_csv("results/model/training_history.csv", index=False)
 
 
 
     model_path = "results/model/my_own_model.pkl"
-    joblib.dump(model, model_path)
+    joblib.dump(best_model, model_path)
+    write_training_report(train_aucs, val_aucs, best_iteration, patience, len(y_val))
+    print("Reference validation ROC AUC (hard-coded): 0.66")
+    print(f"Calculated validation ROC AUC: {best_auc:.4f}")
 
 if __name__ == "__main__":
     main()
