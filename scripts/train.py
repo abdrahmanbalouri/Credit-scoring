@@ -40,9 +40,11 @@ def plot_learning_curve(train_aucs, val_aucs, output_path, best_iteration=None):
 
 
 def write_training_report(train_aucs, val_aucs, best_iteration, patience,
-                          validation_samples, report_path="results/model/model_report.txt"):
+                          validation_samples, report_path="./results/model/model_report.txt"):
     report_path = Path(report_path)
     report = report_path.read_text() if report_path.exists() else ""
+    print(report)
+    
     report = report.split("\n4. VALIDATION RESULTS\n", 1)[0].rstrip()
     best_index = best_iteration - 1
     stopped_early = len(val_aucs) - best_iteration >= patience
@@ -160,7 +162,6 @@ def main():
     model_path = "results/model/my_own_model.pkl"
     joblib.dump(best_model, model_path)
     write_training_report(train_aucs, val_aucs, best_iteration, patience, len(y_val))
-    print("Reference validation ROC AUC (hard-coded): 0.66")
     print(f"Calculated validation ROC AUC: {best_auc:.4f}")
 
 if __name__ == "__main__":

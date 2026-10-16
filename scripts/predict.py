@@ -29,6 +29,7 @@ def evaluate_validation_auc(model, X, y, report_path="./results/model/model_repo
     report_path = Path(report_path)
     marker = "\n4. VALIDATION RESULTS\n"
     report = report_path.read_text() if report_path.exists() else ""
+    print(report)
     stopping_marker = "\n5. LEARNING CURVE AND STOPPING DECISION\n"
     _, separator, stopping_details = report.partition(stopping_marker)
     stopping_section = separator + stopping_details
@@ -88,7 +89,6 @@ def predict():
     X_train = df_train_with_id.drop(columns=["SK_ID_CURR", "TARGET"])
 
     auc = evaluate_validation_auc(model, X_train, y_train)
-    print("Reference AUC on validation set (hard-coded): 0.66")
     print(f"Calculated AUC on validation set: {auc:.4f}")
 
     target_clients = select_target_clients(model, X_train, y_train, train_ids, test_ids)
@@ -362,12 +362,8 @@ def generate_local_interpretation_pdf(
 
     # PDFs retain the explanation and force plot; the companion HTML adds
     # interactive Plotly charts with an embedded JS bundle for offline viewing.
-    charts_html = (
-        key_chart.to_html(full_html=False, include_plotlyjs=True)
-        + comparison_chart.to_html(full_html=False, include_plotlyjs=False)
-    )
-    output_pdf_path.with_suffix(".html").write_text(
-        rendered_html.replace("</body>", charts_html + "</body>"), encoding="utf-8")
+ 
+    
     with open(output_pdf_path, "wb") as pdf_file:
         result = pisa.CreatePDF(rendered_html, dest=pdf_file)
     if result.err:
