@@ -1,11 +1,68 @@
+======================================================================
+              HOME CREDIT - MODEL TRAINING & EVALUATION REPORT
+======================================================================
 
+1. ALGORITHM OVERVIEW
+----------------------------------------------------------------------
+- Model Used: Random Forest Classifier (with iterative warm_start).
+- Architecture: An ensemble learning method constructing multiple 
+  decision trees during training and outputting the class prediction 
+  by averaging individual tree probabilities.
+- Key Hyperparameters:
+  * n_estimators: up to 110 trees (monitored via warm_start progression)
+  * Early stopping: stop after 10 consecutive trees without validation
+    ROC AUC improvement; save the model with the best validation ROC AUC.
+  * max_depth: 10 (limits tree complexity)
+  * min_samples_split: 1000 (requires larger groups before splitting)
+  * min_samples_leaf: 500 (prevents fitting very small client groups)
+  * class_weight: 'balanced_subsample' (addressing class imbalance)
+
+- Preprocessing: replace the employment-day anomaly, derive financial and
+  demographic ratios, remove highly missing columns, impute, and one-hot encode.
+  Missing-value thresholds, numeric medians, and category vocabulary are learned
+  only from the 80% training split; validation rows do not fit preprocessing.
+  Ratios with a zero denominator are imputed as missing values.
+
+
+2. WHY ACCURACY ALONE IS INSUFFICIENT
+----------------------------------------------------------------------
+- Severe Class Imbalance: The Home Credit dataset has a heavily skewed 
+  target distribution where the vast majority of loans are successfully 
+  repaid (Target = 0) and only a small fraction result in default (Target = 1).
+- The Accuracy Trap: A naive baseline model that blindly predicts 
+  "no default" for every single applicant would easily achieve an 
+  accuracy exceeding 90%. However, it would completely fail its core 
+  business objective—identifying risky loans.
+- Metric Choice: We rely on ROC AUC (Area Under the Receiver Operating 
+  Characteristic Curve) instead, as it evaluates the model's ability 
+  to rank-order applicants correctly across all possible classification 
+  thresholds, regardless of class imbalance.
+
+
+3. MODEL LIMITATIONS & POSSIBLE IMPROVEMENTS
+----------------------------------------------------------------------
+- Limitations:
+  * Interpretability Complexity: While Random Forest provides global 
+    feature importance, it remains a black-box model for individual 
+    decisions unless paired with local interpretability tools like SHAP.
+  * Training Overhead: Scaling the ensemble size and depth on large-scale 
+    tabular data requires significant computational time and memory.
+  
+- Possible Improvements:
+  * Advanced Feature Engineering: Incorporating aggregated relational 
+    metrics from external credit bureaus or historical installment data.
+  * Algorithmic Transition: Exploring Gradient Boosting frameworks 
+    (such as XGBoost or LightGBM) with native early stopping to squeeze 
+    out higher predictive performance.
+  * Hyperparameter Tuning: Utilizing automated grid search or Bayesian 
+    optimization (Optuna) to fine-tune leaf nodes and depth constraints.
 
 4. VALIDATION RESULTS
 ----------------------------------------------------------------------
 Reference validation ROC AUC (hard-coded): 0.66
 Calculated validation ROC AUC: 0.7315
 Validation samples: 61503
-Evaluation: 20% stratified holdout, random_state=42 (same as train.py).
+Evaluation: 20% stratified holdout, random_state=42.
 Score: predicted probability of default (TARGET=1).
 
 5. LEARNING CURVE AND STOPPING DECISION

@@ -17,37 +17,6 @@ from pathlib import Path
 from sklearn.metrics import roc_auc_score
 from sklearn.model_selection import train_test_split
 
-
-def evaluate_validation_auc(model, X, y, report_path="./results/model/model_report.txt"):
-    # Recreate the held-out rows used by scripts/train.py.
-    _, X_val, _, y_val = train_test_split(
-        X, y, test_size=0.2, random_state=42, stratify=y
-    )
-    probabilities = model.predict_proba(X_val)[:, 1]
-    auc = roc_auc_score(y_val, probabilities)
-
-    report_path = Path(report_path)
-    marker = "\n4. VALIDATION RESULTS\n"
-    report = report_path.read_text() if report_path.exists() else ""
-    print(report)
-    stopping_marker = "\n5. LEARNING CURVE AND STOPPING DECISION\n"
-    _, separator, stopping_details = report.partition(stopping_marker)
-    stopping_section = separator + stopping_details
-    report = report.split(marker, 1)[0].rstrip()
-    report_path.parent.mkdir(parents=True, exist_ok=True)
-    report_path.write_text(
-        report + "\n" + marker
-        + "-" * 70 + "\n"
-        + "Reference validation ROC AUC (hard-coded): 0.66\n"
-        + f"Calculated validation ROC AUC: {auc:.4f}\n"
-        + f"Validation samples: {len(y_val)}\n"
-        + "Evaluation: 20% stratified holdout, random_state=42 (same as train.py).\n"
-        + "Score: predicted probability of default (TARGET=1).\n"
-        + stopping_section
-    )
-    return auc
-
-
 def select_target_clients(model, X_train, y_train, train_ids, test_ids):
 
     train_preds = model.predict(X_train)
@@ -87,9 +56,6 @@ def predict():
     train_ids = df_train_with_id["SK_ID_CURR"]
     y_train = df_train_with_id["TARGET"]
     X_train = df_train_with_id.drop(columns=["SK_ID_CURR", "TARGET"])
-
-    auc = evaluate_validation_auc(model, X_train, y_train)
-    print(f"Calculated AUC on validation set: {auc:.4f}")
 
     target_clients = select_target_clients(model, X_train, y_train, train_ids, test_ids)
 
