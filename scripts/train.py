@@ -10,13 +10,11 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import roc_auc_score
 from pathlib import Path
 import warnings
-import json
-import hashlib
 warnings.filterwarnings('ignore')
 project_dir = Path(__file__).resolve().parents[1]
 data_dir = project_dir / "data"
 output_dir = data_dir / "processed"
-# Selected on an internal split of the training partition; see regularization.py.
+# Selected on an internal split of the training partition; see the EDA notebook.
 MODEL_PARAMS = dict(max_depth=10, min_samples_split=1000, min_samples_leaf=500)
 
 def plot_learning_curve(train_aucs, val_aucs, output_path, best_iteration=None):
@@ -86,27 +84,8 @@ def write_training_report(train_aucs, val_aucs, best_iteration, patience,
         + "partition; the outer validation rows were excluded from the comparison.\n"
         + "Of three 60-tree candidates, choose the highest internal selection AUC "
         + "among candidates with a training-selection gap <= 0.03. This diagnostic "
-        + "limit is not a statistical guarantee. See regularization_search.csv.\n"
+        + "limit is not a statistical guarantee. See the comparisons in the EDA notebook.\n"
     )
-    baseline_path = project_dir / "results/model/regularization_baseline.json"
-    if baseline_path.exists():
-        baseline = json.loads(baseline_path.read_text())
-        # Compare historical measurements only when the processed data match.
-        fingerprint = hashlib.sha256((output_dir / "train_clean.csv").read_bytes()).hexdigest()
-        if fingerprint == baseline["processed_data_sha256"]:
-            gap = train_aucs[best_index] - val_aucs[best_index]
-            with report_path.open("a") as report_file:
-                report_file.write(
-                    "\nRegularization comparison on the same outer split:\n"
-                    + f"Previous model: training AUC {baseline['training_auc']:.4f}, "
-                    + f"validation AUC {baseline['validation_auc']:.4f}, gap {baseline['gap']:.4f}.\n"
-                    + f"Current model: training AUC {train_aucs[best_index]:.4f}, "
-                    + f"validation AUC {val_aucs[best_index]:.4f}, gap {gap:.4f}.\n"
-                    + "Shallower trees and larger leaves reduce the opportunity to memorize "
-                    + "small training groups. The measured gap and validation plateau "
-                    + "are evidence about this split, not proof of zero overfitting. "
-                    + "Validation is used for early stopping; future-data performance "
-                    + "still requires an independent evaluation.\n")
 
 
 def main():

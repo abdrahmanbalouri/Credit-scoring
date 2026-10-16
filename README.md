@@ -41,7 +41,7 @@ Preprocessing recreates the same split as training before learning these statist
 
 The training script uses a stratified 80/20 split and fits a random forest with balanced class weights, adding up to 110 trees. Trees are limited to depth 10, with at least 500 samples per leaf and 1,000 samples before splitting. These settings were selected by comparing three candidates on an internal split of the training partition. It stops early after 10 consecutive trees without validation ROC AUC improvement and saves the model with the best validation AUC plus a learning-curve chart under `results/model/`.
 
-Reproduce the regularization comparison with `python scripts/regularization.py`. Its internal selection scores are distinct from the outer validation AUC reported by `predict.py`. The search results, training/validation curve values, and historical baseline are saved under `results/model/`. The model report compares the measured gaps; a small gap is evidence of reduced overfitting on this split, not a guarantee of future performance.
+Reproduce the regularization comparison using the self-contained code in the EDA notebooks. Its internal selection scores are distinct from the outer validation AUC reported by `predict.py`. Training/validation curve values are saved in `results/model/training_history.csv`; measured comparisons and the historical baseline are recorded in the notebooks and model report. The model report compares the measured gaps; a small gap is evidence of reduced overfitting on this split, not a guarantee of future performance.
 
 ## Getting started
 
@@ -127,7 +127,7 @@ The prediction script also calculates validation ROC AUC and updates `results/mo
 
 Each client PDF has an HTML companion in `results/clients_outputs/`. Open the HTML files in a browser for offline Plotly charts of key client/loan variables and comparisons with other clients. The PDFs and HTML reports include the probability, SHAP force plot, strongest contributions, and an explanation of whether the prediction matches the known outcome. Test outcomes are unknown.
 
-Both EDA notebooks have an appended feature experiment log. Reproduce the measured comparisons with `python scripts/experiments.py`; results are saved to `results/feature_engineering/experiments.csv`. The exploratory comparison uses fixed samples and identical forest settings with and without engineered features. Its scores are distinct from the saved model's full validation AUC. Existing EDA cells are retained.
+Both EDA notebooks have an appended feature experiment log with self-contained code to reproduce the measured comparisons. The exploratory comparison uses fixed samples and identical forest settings with and without engineered features. Its scores are distinct from the saved model's full validation AUC. Existing EDA cells are retained.
 
 ## Dataset
 

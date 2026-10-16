@@ -79,7 +79,7 @@ Last evaluated point: training AUC 0.7439, validation AUC 0.7308.
 The gap measures the difference in training and validation performance; it does not by itself prove the absence of overfitting.
 Overfitting controls: max_depth=10, min_samples_split=1000, min_samples_leaf=500, and validation-based early stopping.
 Regularization was compared on an internal 80/20 split (random_state=17) of the outer training partition. Preprocessing was fitted on the outer training partition; the outer validation rows were excluded from the comparison.
-Of three 60-tree candidates, choose the highest internal selection AUC among candidates with a training-selection gap <= 0.03. This diagnostic limit is not a statistical guarantee. See regularization_search.csv.
+Of three 60-tree candidates, choose the highest internal selection AUC among candidates with a training-selection gap <= 0.03. This diagnostic limit is not a statistical guarantee. See the measured comparisons in the EDA notebook.
 
 Regularization comparison on the same outer split:
 Previous model: training AUC 0.8679, validation AUC 0.7412, gap 0.1267.

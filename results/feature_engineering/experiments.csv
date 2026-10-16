@@ -1,5 +1,0 @@
-experiment,validation_auc,training_rows,validation_rows,features,evaluation,delta_vs_prior_baseline
-Prior-only baseline,0.5,30000,10000,229,Fixed exploratory sample,0.0
-Forest without engineered features,0.6506813613234897,30000,10000,222,Fixed exploratory sample,0.15068136132348975
-Forest with engineered features,0.7225442665483718,30000,10000,229,Fixed exploratory sample,0.22254426654837178
-Saved scoring model (26 trees),0.7315437857353522,246008,61503,229,Full validation split; different training size from experiments,0.23154378573535217
